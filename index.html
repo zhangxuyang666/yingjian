@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>硬件兼容检测 · Intel + NVIDIA 专属</title>
+    <style>
+        /* ===== 全局样式（同前） ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --primary: #2a6df4;
+            --success: #22b573;
+            --danger: #e8544a;
+            --text: #1a2332;
+            --text2: #4a5a72;
+            --border: #dce3ed;
+            --radius: 16px;
+            --font: 'Segoe UI', system-ui, sans-serif;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        html {
+            font-size: 14px;
+        }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px 24px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .app {
+            max-width: 1480px;
+            width: 100%;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 8px 28px rgba(0, 20, 40, 0.08);
+            padding: 24px 28px 32px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header h1 small {
+            font-size: 0.85rem;
+            -webkit-text-fill-color: var(--text2);
+            background: none;
+            color: var(--text2);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border-radius: 40px;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #1a56d6;
+        }
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #1a9e62;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border);
+        }
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 0.75rem;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(0.4);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 340px 1fr 280px;
+            gap: 20px;
+        }
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr 1fr;
+            }
+            .dashboard .right-panel {
+                grid-column: 1 / -1;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+            .dashboard .right-panel .param-table-wrap {
+                grid-column: 1 / -1;
+            }
+        }
+        @media (max-width: 820px) {
+            body {
+                padding: 12px;
+            }
+            .app {
+                padding: 16px;
+            }
+            .dashboard {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .dashboard .right-panel {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 1.3rem;
+            }
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .panel-card {
+            background: var(--bg);
+            border-radius: 14px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .panel-card .label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--text2);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-card .label .badge {
+            font-size: 0.6rem;
+            background: var(--primary);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+        .cpu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .cpu-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 4px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            font-size: 0.75rem;
+            gap: 2px;
+            min-height: 60px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+        }
+        .cpu-btn .icon {
+            font-size: 1.6rem;
+            line-height: 1.2;
+        }
+        .cpu-btn .name {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .cpu-btn:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+        .cpu-btn.active {
+            border-color: var(--primary);
+            background: #eaf1fe;
+            box-shadow: 0 0 0 3px rgba(42, 109, 244, 0.15);
+        }
+        .cpu-btn.active .name {
+            color: var(--primary);
+        }
+        .select-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .select-group select {
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            background: #fff;
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: var(--text);
+            transition: var(--transition);
+            cursor: pointer;
+            width: 100%;
+            appearance: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .select-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(42, 109, 244, 0.12);
+        }
+        .select-group select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .search-box {
+            position: relative;
+            width: 100%;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            background: #fff;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            outline: none;
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(42, 109, 244, 0.12);
+        }
+        .search-box input::placeholder {
+            color: #aaa;
+        }
+        .scene-group {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .scene-btn {
+            padding: 5px 12px;
+            border-radius: 30px;
+            border: 2px solid var(--border);
+            background: #fff;
+            font-size: 0.72rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            flex: 1 0 auto;
+            text-align: center;
+            min-width: 50px;
+        }
+        .scene-btn:hover {
+            border-color: var(--primary);
+        }
+        .scene-btn.active {
+            border-color: var(--primary);
+            background: #eaf1fe;
+            color: var(--primary);
+        }
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .status-card {
+            border-radius: 14px;
+            padding: 18px 20px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            transition: var(--transition);
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .status-card.compatible {
+            border-color: var(--success);
+            background: #f0faf5;
+        }
+        .status-card.incompatible {
+            border-color: var(--danger);
+            background: #fdf2f0;
+        }
+        .status-card .status-icon {
+            font-size: 2.2rem;
+            line-height: 1;
+        }
+        .status-card .status-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 4px 0 2px;
+        }
+        .status-card .status-desc {
+            color: var(--text2);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .status-card .status-details {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            font-size: 0.8rem;
+        }
+        .status-card .status-details span {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 2px 10px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+        }
+        .status-card .conflict-list {
+            margin-top: 8px;
+            list-style: none;
+            padding: 0;
+        }
+        .status-card .conflict-list li {
+            padding: 4px 0 4px 26px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23e8544a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>') left center no-repeat;
+            background-size: 16px;
+            color: #b33a32;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .status-card .suggestion-box {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+            font-size: 0.85rem;
+        }
+        .status-card .suggestion-box strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .param-table-wrap {
+            background: var(--bg);
+            border-radius: 14px;
+            padding: 14px 14px 10px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+        .param-table-wrap h4 {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--text2);
+            margin-bottom: 10px;
+        }
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .param-table th {
+            text-align: left;
+            font-weight: 600;
+            color: var(--text2);
+            padding: 4px 4px 6px 0;
+            border-bottom: 2px solid var(--border);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .param-table td {
+            padding: 5px 4px 5px 0;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .param-table tr:last-child td {
+            border-bottom: none;
+        }
+        .param-table .arch-icon {
+            font-size: 1rem;
+            margin-right: 4px;
+        }
+        .param-table .highlight-row {
+            background: rgba(42, 109, 244, 0.06);
+        }
+        .param-table .highlight-row td {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: #fff;
+            border-radius: var(--radius);
+            max-width: 620px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 28px 30px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.94) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        .modal h2 {
+            font-size: 1.3rem;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal .close-btn {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: var(--text2);
+            padding: 0 4px;
+            line-height: 1;
+        }
+        .modal .close-btn:hover {
+            color: var(--text);
+        }
+        .modal .arch-detail-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+        }
+        .modal .arch-detail-item:last-child {
+            border-bottom: none;
+        }
+        .modal .arch-detail-item .tag {
+            font-weight: 600;
+            min-width: 60px;
+            color: var(--text2);
+            font-size: 0.8rem;
+        }
+        .report-output {
+            display: none;
+            background: #1a2332;
+            color: #d4e0f0;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.78rem;
+            white-space: pre-wrap;
+            margin-top: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid #2a3a4a;
+        }
+        .report-output.show {
+            display: block;
+        }
+        .plan-output {
+            display: none;
+            background: var(--bg);
+            border-radius: 14px;
+            padding: 14px 18px;
+            border: 2px solid var(--primary);
+        }
+        .plan-output.show {
+            display: block;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .plan-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        @media (max-width: 600px) {
+            .plan-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .plan-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+        }
+        .plan-card .plan-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .plan-card ul {
+            list-style: none;
+            padding: 0;
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
+        .plan-card ul li::before {
+            content: "✓ ";
+            color: var(--success);
+            font-weight: 700;
+        }
+        .mt-1 {
+            margin-top: 8px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .sub-select {
+            margin-top: 6px;
+        }
+        .sub-select select {
+            font-size: 0.8rem;
+            padding: 5px 8px;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b0c0d0;
+        }
+        .game-fps {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: rgba(42, 109, 244, 0.08);
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+            font-size: 0.85rem;
+        }
+        .game-fps strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .rec-hardware {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: rgba(34, 181, 115, 0.08);
+            border-radius: 10px;
+            border-left: 4px solid var(--success);
+            font-size: 0.85rem;
+        }
+        .rec-hardware strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+
+        <header class="header">
+            <h1>🖥️ 硬件兼容检测 · Intel + NVIDIA <small>专属全系库</small></h1>
+            <div class="header-actions">
+                <button class="btn btn-outline btn-sm" onclick="resetAll()">🔄 重置</button>
+                <button class="btn btn-primary btn-sm" onclick="exportReport()">📄 导出报告</button>
+            </div>
+        </header>
+
+        <div class="dashboard">
+
+            <!-- 左栏 -->
+            <div class="left-panel">
+
+                <!-- CPU 架构 -->
+                <div class="panel-card">
+                    <div class="label">⚙️ CPU 架构 <span class="badge">必选</span></div>
+                    <div class="cpu-grid" id="cpuGroup">
+                        <button class="cpu-btn" data-arch="x86" onclick="selectArch('x86')">
+                            <span class="icon">🚇</span>
+                            <span class="name">x86-64</span>
+                        </button>
+                        <button class="cpu-btn" data-arch="arm" onclick="selectArch('arm')">
+                            <span class="icon">🛵</span>
+                            <span class="name">ARM</span>
+                        </button>
+                        <button class="cpu-btn" data-arch="mips" onclick="selectArch('mips')">
+                            <span class="icon">🚄</span>
+                            <span class="name">MIPS</span>
+                        </button>
+                        <button class="cpu-btn" data-arch="riscv" onclick="selectArch('riscv')">
+                            <span class="icon">🛤️</span>
+                            <span class="name">RISC-V</span>
+                        </button>
+                    </div>
+                    <div class="sub-select" id="cpuModelWrap">
+                        <div class="search-box">
+                            <input type="text" id="cpuSearch" placeholder="🔍 搜索 CPU 型号..." oninput="filterCPUList()">
+                        </div>
+                        <select id="cpuModel" onchange="onCpuModelChange()" disabled style="margin-top:6px;">
+                            <option value="">请先选择架构</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 主板 -->
+                <div class="panel-card">
+                    <div class="label">🔌 主板 <span class="badge">匹配CPU</span></div>
+                    <div class="select-group">
+                        <select id="motherboard" onchange="updateCompat()" disabled>
+                            <option value="">请先选择CPU型号</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 内存 -->
+                <div class="panel-card">
+                    <div class="label">🧠 内存</div>
+                    <div class="select-group">
+                        <select id="memory" onchange="updateCompat()">
+                            <option value="DDR3-1333">DDR3-1333</option>
+                            <option value="DDR3-1600">DDR3-1600</option>
+                            <option value="DDR4-2400">DDR4-2400</option>
+                            <option value="DDR4-3200" selected>DDR4-3200</option>
+                            <option value="DDR4-3600">DDR4-3600</option>
+                            <option value="DDR5-4800">DDR5-4800</option>
+                            <option value="DDR5-6000">DDR5-6000</option>
+                            <option value="DDR5-7200">DDR5-7200</option>
+                            <option value="DDR5-8000">DDR5-8000</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 显卡 (仅NVIDIA) -->
+                <div class="panel-card">
+                    <div class="label">🎮 显卡 <span class="badge">NVIDIA</span></div>
+                    <div class="select-group">
+                        <select id="gpu" onchange="updateCompat()">
+                            <!-- 动态填充 -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 电源 -->
+                <div class="panel-card">
+                    <div class="label">⚡ 电源</div>
+                    <div class="select-group">
+                        <select id="psu" onchange="updateCompat()">
+                            <option value="300">300W</option>
+                            <option value="400">400W</option>
+                            <option value="450">450W</option>
+                            <option value="550" selected>550W</option>
+                            <option value="650">650W</option>
+                            <option value="750">750W</option>
+                            <option value="850">850W</option>
+                            <option value="1000">1000W</option>
+                            <option value="1200">1200W</option>
+                            <option value="1500">1500W</option>
+                            <option value="1600">1600W</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 硬盘 -->
+                <div class="panel-card">
+                    <div class="label">💾 硬盘</div>
+                    <div class="select-group">
+                        <select id="storage" onchange="updateCompat()">
+                            <option value="HDD 1TB">HDD 1TB</option>
+                            <option value="HDD 2TB">HDD 2TB</option>
+                            <option value="SSD 256GB">SSD 256GB</option>
+                            <option value="SSD 512GB" selected>SSD 512GB</option>
+                            <option value="SSD 1TB">SSD 1TB</option>
+                            <option value="NVMe 512GB">NVMe 512GB</option>
+                            <option value="NVMe 1TB">NVMe 1TB</option>
+                            <option value="NVMe 2TB">NVMe 2TB</option>
+                            <option value="NVMe 4TB">NVMe 4TB</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 场景 -->
+                <div class="panel-card">
+                    <div class="label">🎯 使用场景</div>
+                    <div class="scene-group" id="sceneGroup">
+                        <button class="scene-btn" data-scene="pc" onclick="selectScene('pc')">💻 PC</button>
+                        <button class="scene-btn" data-scene="server" onclick="selectScene('server')">🖧 服务器</button>
+                        <button class="scene-btn" data-scene="embedded" onclick="selectScene('embedded')">📟 嵌入式</button>
+                        <button class="scene-btn" data-scene="iot" onclick="selectScene('iot')">📶 IoT</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                    <button class="btn btn-success btn-sm" onclick="generatePlan()" id="planBtn" disabled>🧩 生成方案</button>
+                    <button class="btn btn-outline btn-sm" onclick="showArchDetail()">📊 架构详情</button>
+                </div>
+            </div>
+
+            <!-- 中栏 -->
+            <div class="center-panel">
+                <div class="status-card" id="statusCard">
+                    <div class="status-icon" id="statusIcon">🔍</div>
+                    <div class="status-title" id="statusTitle">等待选择硬件</div>
+                    <div class="status-desc" id="statusDesc">请选择 CPU 架构、具体型号、主板等，实时检测兼容性。</div>
+                    <div class="status-details" id="statusDetails"></div>
+                    <div id="statusExtra"></div>
+                </div>
+
+                <div class="plan-output" id="planOutput">
+                    <div class="flex-between">
+                        <strong style="font-size:1rem;">📋 升级替换方案</strong>
+                        <button class="btn btn-sm btn-outline" onclick="document.getElementById('planOutput').classList.remove('show')">✕ 收起</button>
+                    </div>
+                    <div class="plan-grid" id="planContent"></div>
+                </div>
+
+                <div class="report-output" id="reportOutput"></div>
+            </div>
+
+            <!-- 右栏 -->
+            <div class="right-panel">
+                <div class="param-table-wrap">
+                    <h4>📐 架构参数对比</h4>
+                    <table class="param-table" id="paramTable">
+                        <thead><tr><th>架构</th><th>寄存器</th><th>指令集</th><th>功耗</th><th>典型设备</th></tr></thead>
+                        <tbody id="paramBody"></tbody>
+                    </table>
+                </div>
+                <div class="param-table-wrap">
+                    <h4>🧠 设计哲学</h4>
+                    <div style="font-size:0.82rem; line-height:1.5; color:var(--text2);" id="philosophyDisplay">
+                        选择 CPU 架构后显示对应的设计哲学
+                    </div>
+                </div>
+                <div class="text-center">
+                    <button class="btn btn-outline btn-sm" onclick="showArchDetail()">📖 完整架构详情</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模态弹窗 -->
+        <div class="modal-overlay" id="archModal">
+            <div class="modal">
+                <button class="close-btn" onclick="closeModal('archModal')">✕</button>
+                <h2>📖 四大 CPU 架构详解</h2>
+                <div id="modalContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  1. 硬件数据库 —— 仅 Intel CPU + NVIDIA GPU
+        // ================================================================
+
+        // ----- 辅助：生成 Intel CPU (覆盖0-2000元价位) -----
+        function generateIntelCPUs() {
+            const list = [];
+            // 低端 Celeron / Pentium (0-300元)
+            const lowEnd = ['Celeron G5905', 'Celeron G6900', 'Pentium G6405', 'Pentium Gold G7400'];
+            lowEnd.forEach(m => {
+                let socket = 'LGA1200';
+                if (m.includes('G6900') || m.includes('G7400')) socket = 'LGA1700';
+                list.push({ model: 'Intel ' + m, socket: socket, tdp: 58 });
+            });
+
+            // Core i3 系列 (300-800元)
+            const i3 = [
+                'Core i3-10100', 'Core i3-10300', 'Core i3-11100', 'Core i3-12100', 'Core i3-13100', 'Core i3-14100',
+                'Core i3-2100', 'Core i3-3220', 'Core i3-4130', 'Core i3-6100', 'Core i3-7100', 'Core i3-8100',
+                'Core i3-9100F'
+            ];
+            i3.forEach(m => {
+                let socket = 'LGA1200';
+                let tdp = 65;
+                if (m.includes('2100') || m.includes('3220') || m.includes('4130')) socket = 'LGA1155';
+                if (m.includes('6100') || m.includes('7100') || m.includes('8100') || m.includes('9100')) socket =
+                    'LGA1151';
+                if (m.includes('10100') || m.includes('10300') || m.includes('11100')) socket = 'LGA1200';
+                if (m.includes('12100') || m.includes('13100') || m.includes('14100')) socket = 'LGA1700';
+                list.push({ model: 'Intel ' + m, socket: socket, tdp: tdp });
+            });
+
+            // Core i5 系列 (800-1500元)
+            const i5 = [
+                'Core i5-10400', 'Core i5-11400', 'Core i5-12400', 'Core i5-13400', 'Core i5-14400',
+                'Core i5-2500K', 'Core i5-3570K', 'Core i5-4670K', 'Core i5-6600K', 'Core i5-7600K',
+                'Core i5-8400', 'Core i5-9400F', 'Core i5-9600K', 'Core i5-10600K', 'Core i5-11600K',
+                'Core i5-12600K', 'Core i5-13600K', 'Core i5-14600K'
+            ];
+            i5.forEach(m => {
+                let socket = 'LGA1200';
+                let tdp = 65;
+                if (m.includes('2500') || m.includes('3570')) socket = 'LGA1155';
+                if (m.includes('4670')) socket = 'LGA1150';
+                if (m.includes('6600') || m.includes('7600') || m.includes('8400') || m.includes('9400') || m
+                    .includes('9600')) socket = 'LGA1151';
+                if (m.includes('10400') || m.includes('10600') || m.includes('11400') || m.includes('11600'))
+                    socket = 'LGA1200';
+                if (m.includes('12400') || m.includes('12600') || m.includes('13400') || m.includes('13600') || m
+                    .includes('14400') || m.includes('14600')) socket = 'LGA1700';
+                if (m.includes('K')) tdp += 30;
+                list.push({ model: 'Intel ' + m, socket: socket, tdp: tdp });
+            });
+
+            // Core i7 / i9 系列 (1500-5000元)
+            const high = [
+                'Core i7-10700K', 'Core i7-11700K', 'Core i7-12700K', 'Core i7-13700K', 'Core i7-14700K',
+                'Core i9-10900K', 'Core i9-11900K', 'Core i9-12900K', 'Core i9-13900K', 'Core i9-14900K',
+                'Core i7-4790K', 'Core i7-6700K', 'Core i7-7700K', 'Core i7-8700K', 'Core i7-9700K',
+                'Core i9-9900K'
+            ];
+            high.forEach(m => {
+                let socket = 'LGA1200';
+                let tdp = 95;
+                if (m.includes('4790')) socket = 'LGA1150';
+                if (m.includes('6700') || m.includes('7700') || m.includes('8700') || m.includes('9700') || m
+                    .includes('9900')) socket = 'LGA1151';
+                if (m.includes('10700') || m.includes('10900') || m.includes('11700') || m.includes('11900'))
+                    socket = 'LGA1200';
+                if (m.includes('12700') || m.includes('12900') || m.includes('13700') || m.includes('13900') || m
+                    .includes('14700') || m.includes('14900')) socket = 'LGA1700';
+                if (m.includes('K')) tdp += 30;
+                list.push({ model: 'Intel ' + m, socket: socket, tdp: tdp });
+            });
+
+            // 至强 E3/E5 (服务器)
+            const xeons = ['Xeon E3-1230 v3', 'Xeon E3-1240 v5', 'Xeon E5-2670', 'Xeon E5-2699 v4'];
+            xeons.forEach(m => {
+                let socket = 'LGA1150';
+                if (m.includes('v5')) socket = 'LGA1151';
+                if (m.includes('E5')) socket = 'LGA2011';
+                list.push({ model: 'Intel ' + m, socket: socket, tdp: 80 });
+            });
+
+            return list;
+        }
+
+        // ----- 辅助：生成 NVIDIA GPU (全部) -----
+        function generateNvidiaGPUs() {
+            const list = [];
+            const models = [
+                'GT 730', 'GT 1030',
+                'GTX 750 Ti', 'GTX 950', 'GTX 960', 'GTX 970', 'GTX 980', 'GTX 980 Ti',
+                'GTX 1050', 'GTX 1050 Ti', 'GTX 1060 3GB', 'GTX 1060 6GB', 'GTX 1070', 'GTX 1070 Ti', 'GTX 1080',
+                'GTX 1080 Ti',
+                'GTX 1650', 'GTX 1650 Super', 'GTX 1660', 'GTX 1660 Ti', 'GTX 1660 Super',
+                'RTX 2060', 'RTX 2060 Super', 'RTX 2070', 'RTX 2070 Super', 'RTX 2080', 'RTX 2080 Super', 'RTX 2080 Ti',
+                'RTX 3050', 'RTX 3060', 'RTX 3060 Ti', 'RTX 3070', 'RTX 3070 Ti', 'RTX 3080', 'RTX 3080 Ti',
+                'RTX 3090', 'RTX 3090 Ti',
+                'RTX 4060', 'RTX 4060 Ti', 'RTX 4070', 'RTX 4070 Ti', 'RTX 4070 Ti SUPER', 'RTX 4080', 'RTX 4080 SUPER',
+                'RTX 4090', 'RTX 4090 D'
+            ];
+            const tdpMap = {
+                'GT 730': 49,
+                'GT 1030': 30,
+                'GTX 750 Ti': 60,
+                'GTX 950': 90,
+                'GTX 960': 120,
+                'GTX 970': 145,
+                'GTX 980': 165,
+                'GTX 980 Ti': 250,
+                'GTX 1050': 75,
+                'GTX 1050 Ti': 75,
+                'GTX 1060 3GB': 120,
+                'GTX 1060 6GB': 120,
+                'GTX 1070': 150,
+                'GTX 1070 Ti': 180,
+                'GTX 1080': 180,
+                'GTX 1080 Ti': 250,
+                'GTX 1650': 75,
+                'GTX 1650 Super': 100,
+                'GTX 1660': 120,
+                'GTX 1660 Ti': 120,
+                'GTX 1660 Super': 125,
+                'RTX 2060': 160,
+                'RTX 2060 Super': 175,
+                'RTX 2070': 175,
+                'RTX 2070 Super': 215,
+                'RTX 2080': 215,
+                'RTX 2080 Super': 250,
+                'RTX 2080 Ti': 250,
+                'RTX 3050': 130,
+                'RTX 3060': 170,
+                'RTX 3060 Ti': 200,
+                'RTX 3070': 220,
+                'RTX 3070 Ti': 290,
+                'RTX 3080': 320,
+                'RTX 3080 Ti': 350,
+                'RTX 3090': 350,
+                'RTX 3090 Ti': 450,
+                'RTX 4060': 115,
+                'RTX 4060 Ti': 160,
+                'RTX 4070': 200,
+                'RTX 4070 Ti': 285,
+                'RTX 4070 Ti SUPER': 285,
+                'RTX 4080': 320,
+                'RTX 4080 SUPER': 320,
+                'RTX 4090': 450,
+                'RTX 4090 D': 425,
+            };
+            models.forEach(m => {
+                const tdp = tdpMap[m] || 150;
+                list.push({ model: 'NVIDIA ' + m, tdp: tdp });
+            });
+            return list;
+        }
+
+        // ----- 辅助：生成主板 (Intel) 覆盖所有插槽 -----
+        function generateIntelBoards() {
+            const list = [];
+            const socketChipsets = {
+                'LGA775': ['P45', 'P43', 'G41'],
+                'LGA1366': ['X58', 'X58A'],
+                'LGA1156': ['P55', 'H55', 'H57'],
+                'LGA1155': ['Z77', 'Z68', 'P67', 'H67', 'B75'],
+                'LGA1150': ['Z97', 'Z87', 'H97', 'H87', 'B85'],
+                'LGA1151': ['Z370', 'Z390', 'B360', 'B365', 'H310'],
+                'LGA1200': ['Z490', 'Z590', 'B460', 'B560', 'H410'],
+                'LGA1700': ['Z690', 'Z790', 'B660', 'B760', 'H610'],
+                'LGA2011': ['X79', 'X99'],
+                'LGA3647': ['C621'],
+            };
+            const brands = ['ASUS', 'MSI', 'Gigabyte', 'ASRock'];
+            Object.keys(socketChipsets).forEach(socket => {
+                const chips = socketChipsets[socket];
+                chips.forEach(chip => {
+                    brands.forEach(brand => {
+                        let model = `${brand} ${chip} ${socket}`;
+                        if (brand === 'ASUS') model = `ASUS ${chip} ${socket}`;
+                        else if (brand === 'MSI') model = `MSI ${chip} ${socket}`;
+                        else if (brand === 'Gigabyte') model = `GIGABYTE ${chip} ${socket}`;
+                        else model = `ASRock ${chip} ${socket}`;
+                        let memory = ['DDR3'];
+                        if (socket === 'LGA1151' || socket === 'LGA1200' || socket === 'LGA1700' || socket ===
+                            'LGA2011' || socket === 'LGA3647') {
+                            memory = ['DDR4'];
+                        }
+                        if (socket === 'LGA1700') memory = ['DDR4', 'DDR5'];
+                        if (socket === 'LGA1151' && chip.startsWith('Z')) memory = ['DDR3', 'DDR4'];
+                        list.push({ model: model, socket: socket, memory: memory });
+                    });
+                });
+            });
+            // 增加服务器板
+            list.push({ model: 'Supermicro X10SRH-CLN4F', socket: 'LGA2011', memory: ['DDR4'] });
+            list.push({ model: 'Supermicro X11SPi-TF', socket: 'LGA3647', memory: ['DDR4'] });
+            return list;
+        }
+
+        // ----- ARM / MIPS / RISC-V (保留) -----
+        function generateARMData() {
+            const cpus = [
+                { model: 'Qualcomm Snapdragon 8cx Gen 3', socket: 'SoC', tdp: 15 },
+                { model: 'Apple M1', socket: 'SoC', tdp: 20 },
+                { model: 'Apple M2', socket: 'SoC', tdp: 20 },
+                { model: 'AWS Graviton 3', socket: 'SoC', tdp: 30 },
+            ];
+            const boards = [
+                { model: 'Qualcomm Snapdragon 8cx Reference Board', socket: 'SoC', memory: ['LPDDR4X', 'LPDDR5'] },
+                { model: 'Apple Developer Transition Kit', socket: 'SoC', memory: ['LPDDR5'] },
+                { model: 'AWS Graviton 3 Server Board', socket: 'SoC', memory: ['DDR4'] },
+            ];
+            return { cpus, boards };
+        }
+
+        function generateMIPSData() {
+            const cpus = [
+                { model: 'Loongson 3A5000', socket: 'BGA', tdp: 30 },
+                { model: 'Ingenic X2000', socket: 'BGA', tdp: 5 },
+            ];
+            const boards = [
+                { model: 'Loongson 3A5000 Motherboard', socket: 'BGA', memory: ['DDR4'] },
+                { model: 'Ingenic X2000 Development Board', socket: 'BGA', memory: ['DDR3'] },
+            ];
+            return { cpus, boards };
+        }
+
+        function generateRISCVData() {
+            const cpus = [
+                { model: 'SiFive U74', socket: 'SoC', tdp: 10 },
+                { model: 'StarFive JH7110', socket: 'SoC', tdp: 15 },
+                { model: 'T-Head C910', socket: 'SoC', tdp: 8 },
+            ];
+            const boards = [
+                { model: 'SiFive HiFive Unmatched', socket: 'SoC', memory: ['DDR4'] },
+                { model: 'StarFive VisionFive 2', socket: 'SoC', memory: ['DDR4'] },
+                { model: 'T-Head RISC-V Dev Board', socket: 'SoC', memory: ['DDR4'] },
+            ];
+            return { cpus, boards };
+        }
+
+        // ================================================================
+        //  2. 构建 ARCH_DATA
+        // ================================================================
+        const ARCH_DATA = {
+            x86: {
+                id: 'x86',
+                label: 'x86-64',
+                icon: '🚇',
+                registers: 16,
+                isa: 'CISC',
+                power: '6W – 270W',
+                devices: '台式机、服务器',
+                philosophy: '性能优先，向后兼容，生态丰富，高功耗区间覆盖广。',
+                scenes: ['pc', 'server'],
+                cpus: [...generateIntelCPUs()], // 仅 Intel
+                boards: [...generateIntelBoards()]
+            },
+            arm: {
+                id: 'arm',
+                label: 'ARM',
+                icon: '🛵',
+                registers: 31,
+                isa: 'RISC',
+                power: '0.5W – 30W',
+                devices: '移动端、车载、云服务器',
+                philosophy: '低功耗、高效率，移动生态王者，服务器领域快速崛起。',
+                scenes: ['pc', 'server', 'embedded', 'iot'],
+                cpus: generateARMData().cpus,
+                boards: generateARMData().boards
+            },
+            mips: {
+                id: 'mips',
+                label: 'MIPS',
+                icon: '🚄',
+                registers: 32,
+                isa: 'RISC',
+                power: '1W – 15W',
+                devices: '网络机顶盒、工业嵌入式',
+                philosophy: '简洁高效，专攻嵌入式，龙芯/君正为代表，生态相对封闭。',
+                scenes: ['embedded', 'iot'],
+                cpus: generateMIPSData().cpus,
+                boards: generateMIPSData().boards
+            },
+            riscv: {
+                id: 'riscv',
+                label: 'RISC-V',
+                icon: '🛤️',
+                registers: 32,
+                isa: 'RISC',
+                power: '0.5W – 100W',
+                devices: 'IoT、笔记本、工控',
+                philosophy: '开源、模块化、可扩展，从嵌入式到高性能计算全面覆盖。',
+                scenes: ['pc', 'embedded', 'iot'],
+                cpus: generateRISCVData().cpus,
+                boards: generateRISCVData().boards
+            }
+        };
+
+        // 仅 NVIDIA GPU
+        const GPU_LIST = generateNvidiaGPUs();
+
+        // ================================================================
+        //  3. 游戏帧率预测数据库 (根据CPU+GPU组合)
+        // ================================================================
+        const GAME_FPS = {
+            // 键: "CPU型号关键词|GPU型号关键词"  -> FPS (1080p High)
+            // 实际使用模糊匹配
+            'Cyberpunk 2077': {
+                'RTX 4090': 120,
+                'RTX 4080': 90,
+                'RTX 4070 Ti': 75,
+                'RTX 4070': 65,
+                'RTX 4060 Ti': 55,
+                'RTX 4060': 45,
+                'RTX 3090': 80,
+                'RTX 3080': 70,
+                'RTX 3070': 60,
+                'RTX 3060': 45,
+                'RTX 3050': 30,
+                'GTX 1660': 25,
+                'GTX 1060': 20,
+            },
+            'CS2': {
+                'RTX 4090': 400,
+                'RTX 4080': 350,
+                'RTX 4070 Ti': 300,
+                'RTX 4070': 270,
+                'RTX 4060 Ti': 240,
+                'RTX 4060': 210,
+                'RTX 3090': 320,
+                'RTX 3080': 280,
+                'RTX 3070': 250,
+                'RTX 3060': 200,
+                'RTX 3050': 150,
+                'GTX 1660': 120,
+                'GTX 1060': 90,
+            },
+            'Valorant': {
+                'RTX 4090': 600,
+                'RTX 4080': 550,
+                'RTX 4070 Ti': 480,
+                'RTX 4070': 430,
+                'RTX 4060 Ti': 380,
+                'RTX 4060': 340,
+                'RTX 3090': 500,
+                'RTX 3080': 450,
+                'RTX 3070': 400,
+                'RTX 3060': 320,
+                'RTX 3050': 250,
+                'GTX 1660': 180,
+                'GTX 1060': 140,
+            },
+            'The Witcher 3': {
+                'RTX 4090': 150,
+                'RTX 4080': 120,
+                'RTX 4070 Ti': 100,
+                'RTX 4070': 85,
+                'RTX 4060 Ti': 70,
+                'RTX 4060': 60,
+                'RTX 3090': 110,
+                'RTX 3080': 95,
+                'RTX 3070': 80,
+                'RTX 3060': 60,
+                'RTX 3050': 45,
+                'GTX 1660': 35,
+                'GTX 1060': 30,
+            },
+            'Red Dead Redemption 2': {
+                'RTX 4090': 110,
+                'RTX 4080': 85,
+                'RTX 4070 Ti': 70,
+                'RTX 4070': 60,
+                'RTX 4060 Ti': 50,
+                'RTX 4060': 40,
+                'RTX 3090': 80,
+                'RTX 3080': 65,
+                'RTX 3070': 55,
+                'RTX 3060': 40,
+                'RTX 3050': 28,
+                'GTX 1660': 22,
+                'GTX 1060': 18,
+            }
+        };
+
+        // ================================================================
+        //  4. 状态管理
+        // ================================================================
+        let state = {
+            arch: null,
+            cpuModel: null,
+            cpuTdp: 0,
+            cpuSocket: '',
+            board: null,
+            boardObj: null,
+            memory: 'DDR4-3200',
+            gpu: 'NVIDIA RTX 3060',
+            gpuTdp: 170,
+            psu: 550,
+            storage: 'SSD 512GB',
+            scene: 'pc',
+            compatible: null,
+            conflictReasons: [],
+            suggestion: null,
+            planGenerated: false,
+        };
+
+        // ================================================================
+        //  5. DOM 引用
+        // ================================================================
+        const $ = id => document.getElementById(id);
+        const cpuBtns = document.querySelectorAll('.cpu-btn');
+        const sceneBtns = document.querySelectorAll('.scene-btn');
+        const cpuSearch = $('cpuSearch');
+        const cpuModelSel = $('cpuModel');
+        const motherboardSel = $('motherboard');
+        const memorySel = $('memory');
+        const gpuSel = $('gpu');
+        const psuSel = $('psu');
+        const storageSel = $('storage');
+        const statusCard = $('statusCard');
+        const statusIcon = $('statusIcon');
+        const statusTitle = $('statusTitle');
+        const statusDesc = $('statusDesc');
+        const statusDetails = $('statusDetails');
+        const statusExtra = $('statusExtra');
+        const planBtn = $('planBtn');
+        const planOutput = $('planOutput');
+        const planContent = $('planContent');
+        const reportOutput = $('reportOutput');
+        const paramBody = $('paramBody');
+        const philosophyDisplay = $('philosophyDisplay');
+
+        // ================================================================
+        //  6. 初始化
+        // ================================================================
+        function init() {
+            // 填充 GPU 下拉
+            gpuSel.innerHTML = '';
+            GPU_LIST.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.model;
+                opt.textContent = `${g.model} (TDP ${g.tdp}W)`;
+                opt.dataset.tdp = g.tdp;
+                gpuSel.appendChild(opt);
+            });
+            gpuSel.value = 'NVIDIA RTX 3060';
+            state.gpu = 'NVIDIA RTX 3060';
+            state.gpuTdp = 170;
+
+            renderParamTable();
+            selectArch('x86');
+            selectScene('pc');
+
+            memorySel.addEventListener('change', () => {
+                state.memory = memorySel.value;
+                updateCompat();
+            });
+            gpuSel.addEventListener('change', () => {
+                const opt = gpuSel.options[gpuSel.selectedIndex];
+                state.gpu = opt.value;
+                state.gpuTdp = parseInt(opt.dataset.tdp) || 150;
+                updateCompat();
+            });
+            psuSel.addEventListener('change', () => {
+                state.psu = parseInt(psuSel.value) || 0;
+                updateCompat();
+            });
+            storageSel.addEventListener('change', () => {
+                state.storage = storageSel.value;
+                updateCompat();
+            });
+
+            window.resetAll = resetAll;
+            window.exportReport = exportReport;
+            window.generatePlan = generatePlan;
+            window.showArchDetail = showArchDetail;
+            window.closeModal = closeModal;
+            window.selectArch = selectArch;
+            window.selectScene = selectScene;
+            window.updateCompat = updateCompat;
+            window.onCpuModelChange = onCpuModelChange;
+            window.filterCPUList = filterCPUList;
+        }
+
+        // ================================================================
+        //  7. 渲染参数表
+        // ================================================================
+        function renderParamTable() {
+            const entries = Object.values(ARCH_DATA);
+            let html = '';
+            entries.forEach(a => {
+                const isActive = (state.arch === a.id);
+                html += `<tr class="${isActive ? 'highlight-row' : ''}">
+                            <td><span class="arch-icon">${a.icon}</span> ${a.label}</td>
+                            <td>${a.registers}</td>
+                            <td>${a.isa}</td>
+                            <td>${a.power}</td>
+                            <td>${a.devices}</td>
+                        </tr>`;
+            });
+            paramBody.innerHTML = html;
+        }
+
+        // ================================================================
+        //  8. 选择架构
+        // ================================================================
+        function selectArch(archId) {
+            state.arch = archId;
+            cpuBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.arch === archId);
+            });
+            const arch = ARCH_DATA[archId];
+            philosophyDisplay.textContent = `${arch.icon} ${arch.label}：${arch.philosophy}`;
+            renderParamTable();
+
+            cpuModelSel.disabled = false;
+            populateCPUList(arch.cpus);
+            state.cpuModel = null;
+            state.cpuTdp = 0;
+            state.cpuSocket = '';
+            motherboardSel.disabled = true;
+            motherboardSel.innerHTML = '<option value="">请先选择CPU型号</option>';
+            planOutput.classList.remove('show');
+            state.planGenerated = false;
+            updateCompat();
+        }
+
+        // ================================================================
+        //  9. 填充 CPU 列表
+        // ================================================================
+        function populateCPUList(cpus, filterText = '') {
+            const sel = cpuModelSel;
+            sel.innerHTML = '<option value="">选择具体型号</option>';
+            const lower = filterText.toLowerCase();
+            cpus.forEach(cpu => {
+                const display = `${cpu.model} (TDP ${cpu.tdp}W, ${cpu.socket})`;
+                if (filterText && !display.toLowerCase().includes(lower)) return;
+                const opt = document.createElement('option');
+                opt.value = cpu.model;
+                opt.textContent = display;
+                opt.dataset.socket = cpu.socket;
+                opt.dataset.tdp = cpu.tdp;
+                sel.appendChild(opt);
+            });
+            if (state.cpuModel && Array.from(sel.options).some(o => o.value === state.cpuModel)) {
+                sel.value = state.cpuModel;
+            } else {
+                sel.value = '';
+            }
+        }
+
+        function filterCPUList() {
+            const arch = ARCH_DATA[state.arch];
+            if (!arch) return;
+            const filter = cpuSearch.value;
+            populateCPUList(arch.cpus, filter);
+            if (!Array.from(cpuModelSel.options).some(o => o.value === state.cpuModel)) {
+                state.cpuModel = null;
+                state.cpuTdp = 0;
+                state.cpuSocket = '';
+                motherboardSel.disabled = true;
+                motherboardSel.innerHTML = '<option value="">请先选择CPU型号</option>';
+                updateCompat();
+            }
+        }
+
+        // ================================================================
+        //  10. CPU 型号改变
+        // ================================================================
+        function onCpuModelChange() {
+            const selected = cpuModelSel.value;
+            if (!selected) {
+                state.cpuModel = null;
+                state.cpuTdp = 0;
+                state.cpuSocket = '';
+                motherboardSel.disabled = true;
+                motherboardSel.innerHTML = '<option value="">请先选择CPU型号</option>';
+                updateCompat();
+                return;
+            }
+            const arch = ARCH_DATA[state.arch];
+            const cpu = arch.cpus.find(c => c.model === selected);
+            if (!cpu) return;
+            state.cpuModel = cpu.model;
+            state.cpuTdp = cpu.tdp;
+            state.cpuSocket = cpu.socket;
+
+            let compatibleBoards = arch.boards.filter(b => b.socket === cpu.socket);
+            if (compatibleBoards.length === 0) {
+                const genBoard = {
+                    model: `通用 ${cpu.socket} 主板 (兼容)`,
+                    socket: cpu.socket,
+                    memory: ['DDR4', 'DDR5']
+                };
+                compatibleBoards.push(genBoard);
+                arch.boards.push(genBoard);
+            }
+            motherboardSel.disabled = false;
+            motherboardSel.innerHTML = '<option value="">选择主板</option>';
+            compatibleBoards.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.model;
+                opt.textContent = `${b.model} (支持 ${b.memory.join('/')})`;
+                opt.dataset.memory = b.memory.join(',');
+                motherboardSel.appendChild(opt);
+            });
+            if (compatibleBoards.some(b => b.model === state.board)) {
+                motherboardSel.value = state.board;
+            } else {
+                state.board = null;
+                state.boardObj = null;
+                motherboardSel.value = '';
+            }
+            updateCompat();
+        }
+
+        // ================================================================
+        //  11. 场景选择
+        // ================================================================
+        function selectScene(sceneId) {
+            state.scene = sceneId;
+            sceneBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.scene === sceneId);
+            });
+            updateCompat();
+        }
+
+        // ================================================================
+        //  12. 核心兼容判定
+        // ================================================================
+        function updateCompat() {
+            const archId = state.arch;
+            const arch = archId ? ARCH_DATA[archId] : null;
+            const cpuModel = state.cpuModel;
+            const boardModel = motherboardSel.value;
+            const memoryType = state.memory;
+            const gpuModel = state.gpu;
+            const gpuTdp = state.gpuTdp;
+            const psuW = state.psu;
+            const scene = state.scene;
+
+            let boardObj = null;
+            if (arch && boardModel) {
+                boardObj = arch.boards.find(b => b.model === boardModel) || null;
+            }
+            state.board = boardModel;
+            state.boardObj = boardObj;
+
+            if (!archId || !cpuModel || !boardModel || !scene) {
+                statusCard.className = 'status-card';
+                statusIcon.textContent = '🔍';
+                statusTitle.textContent = '请完善硬件选择';
+                statusDesc.textContent = '需要选择 CPU 架构、具体型号、主板和使用场景。';
+                statusDetails.innerHTML = '';
+                statusExtra.innerHTML = '';
+                planBtn.disabled = true;
+                state.compatible = null;
+                state.conflictReasons = [];
+                state.suggestion = null;
+                return;
+            }
+
+            const conflicts = [];
+            let compatible = true;
+
+            if (!boardObj) {
+                compatible = false;
+                conflicts.push(`主板 "${boardModel}" 与 CPU "${cpuModel}" 插槽不匹配。`);
+            } else {
+                if (!boardObj.memory.some(m => memoryType.startsWith(m))) {
+                    compatible = false;
+                    conflicts.push(`主板 "${boardModel}" 不支持 ${memoryType}，支持类型：${boardObj.memory.join('/')}`);
+                }
+            }
+
+            const otherPower = 50;
+            const totalTdp = state.cpuTdp + gpuTdp + otherPower;
+            const recommendedPsu = Math.ceil(totalTdp * 1.25);
+            if (psuW < recommendedPsu) {
+                compatible = false;
+                conflicts.push(`电源 ${psuW}W 不足以驱动整机（估算总功耗 ${totalTdp}W，建议 ≥ ${recommendedPsu}W）。`);
+            }
+
+            if (arch && !arch.scenes.includes(scene)) {
+                compatible = false;
+                const sceneMap = { pc: 'PC', server: '服务器', embedded: '嵌入式', iot: 'IoT' };
+                conflicts.push(`使用场景 "${sceneMap[scene]}" 不推荐用于 ${arch.label}，推荐场景：${arch.scenes.map(s => sceneMap[s]).join('、')}。`);
+            }
+
+            let riscvNote = '';
+            if (archId === 'riscv' && boardModel && !boardModel.toLowerCase().includes('sifive') && !boardModel.toLowerCase()
+                .includes('赛昉') && !boardModel.toLowerCase().includes('平头哥')) {
+                riscvNote = '⚠️ 非专用 RISC-V 芯片组主板，性能可能受限。';
+            }
+            let armNote = '';
+            if (archId === 'arm' && psuW > 600) {
+                armNote = '💡 ARM 功耗极低，高功率电源非必需。';
+            }
+
+            state.compatible = compatible;
+            state.conflictReasons = conflicts;
+
+            let suggestion = null;
+            if (!compatible) {
+                suggestion = generateSuggestion(archId, cpuModel, boardModel, memoryType, gpuModel, psuW, scene, conflicts);
+                state.suggestion = suggestion;
+                planBtn.disabled = false;
+            } else {
+                state.suggestion = null;
+                planBtn.disabled = true;
+                planOutput.classList.remove('show');
+            }
+
+            renderStatus(arch, cpuModel, boardObj, memoryType, gpuModel, psuW, scene, compatible, conflicts, suggestion,
+                riscvNote, armNote, totalTdp, recommendedPsu);
+            renderParamTable();
+
+            if (compatible) {
+                planOutput.classList.remove('show');
+                state.planGenerated = false;
+            }
+        }
+
+        // ================================================================
+        //  13. 生成建议
+        // ================================================================
+        function generateSuggestion(archId, cpuModel, boardModel, memoryType, gpuModel, psuW, scene, conflicts) {
+            const arch = ARCH_DATA[archId];
+            const sceneMap = { pc: 'PC', server: '服务器', embedded: '嵌入式', iot: 'IoT' };
+            let suggestions = [];
+
+            conflicts.forEach(c => {
+                if (c.includes('主板')) {
+                    const cpu = arch.cpus.find(c => c.model === cpuModel);
+                    const recBoards = arch.boards.filter(b => b.socket === cpu?.socket).slice(0, 2);
+                    if (recBoards.length) {
+                        suggestions.push(`更换主板为：${recBoards.map(b => b.model).join(' 或 ')}`);
+                    } else {
+                        suggestions.push('更换主板为兼容型号');
+                    }
+                }
+                if (c.includes('内存')) {
+                    const supported = arch.boards.find(b => b.model === boardModel)?.memory || ['DDR4'];
+                    suggestions.push(`更换内存为：${supported.join(' 或 ')}`);
+                }
+                if (c.includes('电源')) {
+                    const cpuTdp = arch.cpus.find(c => c.model === cpuModel)?.tdp || 100;
+                    const gpuTdp = GPU_LIST.find(g => g.model === gpuModel)?.tdp || 150;
+                    const recW = Math.ceil((cpuTdp + gpuTdp + 50) * 1.25);
+                    suggestions.push(`更换电源为：≥${recW}W（推荐 ${Math.ceil(recW/50)*50}W）`);
+                }
+                if (c.includes('场景')) {
+                    const rec = arch.scenes.map(s => sceneMap[s]).join('、');
+                    suggestions.push(`调整使用场景为：${rec}`);
+                }
+            });
+
+            if (suggestions.length === 0) {
+                suggestions.push('请检查硬件兼容性，或咨询技术支持。');
+            }
+            return {
+                summary: `当前配置存在 ${conflicts.length} 项不兼容问题。`,
+                items: suggestions,
+                raw: conflicts
+            };
+        }
+
+        // ================================================================
+        //  14. 渲染状态 + 游戏帧率 + 推荐硬件
+        // ================================================================
+        function renderStatus(arch, cpuModel, boardObj, memoryType, gpuModel, psuW, scene, compatible, conflicts, suggestion,
+            riscvNote, armNote, totalTdp, recommendedPsu) {
+            const sceneMap = { pc: '💻 PC', server: '🖧 服务器', embedded: '📟 嵌入式', iot: '📶 IoT' };
+            const sceneLabel = scene ? sceneMap[scene] || scene : '未选择';
+
+            if (!arch || !cpuModel || !boardObj) return;
+
+            // 游戏帧率预测
+            let gameFpsHtml = '';
+            if (compatible) {
+                const gpuShort = gpuModel.replace('NVIDIA ', '');
+                let fpsLines = [];
+                for (const [game, gpuMap] of Object.entries(GAME_FPS)) {
+                    // 尝试匹配GPU
+                    let fps = null;
+                    for (const [key, val] of Object.entries(gpuMap)) {
+                        if (gpuShort.includes(key) || key.includes(gpuShort)) {
+                            fps = val;
+                            break;
+                        }
+                    }
+                    if (fps) {
+                        fpsLines.push(`${game}: ~${fps} FPS (1080p High)`);
+                    }
+                }
+                if (fpsLines.length > 0) {
+                    gameFpsHtml = `<div class="game-fps"><strong>🎮 游戏帧率预测 (基于GPU)</strong>${fpsLines.map(s => `<div>${s}</div>`).join('')}</div>`;
+                }
+            }
+
+            // 推荐硬件 (当用户选择CPU后，推荐主板、显卡、电源等)
+            let recHardwareHtml = '';
+            if (cpuModel && arch) {
+                const cpu = arch.cpus.find(c => c.model === cpuModel);
+                if (cpu) {
+                    const recBoards = arch.boards.filter(b => b.socket === cpu.socket).slice(0, 3);
+                    const recGpu = GPU_LIST.slice(0, 5).map(g => g.model).join('、');
+                    const recPsu = Math.ceil((cpu.tdp + 150 + 50) * 1.25);
+                    const recMem = boardObj ? boardObj.memory[0] : 'DDR4';
+                    recHardwareHtml = `<div class="rec-hardware"><strong>💡 推荐硬件搭配 (基于 CPU ${cpu.model})</strong>
+                                <div>主板：${recBoards.map(b => b.model).join('、')}</div>
+                                <div>显卡：${recGpu}</div>
+                                <div>电源：≥${recPsu}W</div>
+                                <div>内存：${recMem}</div>
+                            </div>`;
+                }
+            }
+
+            if (compatible) {
+                statusCard.className = 'status-card compatible';
+                statusIcon.textContent = '✅';
+                statusTitle.textContent = '🟢 完全兼容';
+                statusDesc.textContent =
+                    `${arch.icon} ${arch.label} · ${cpuModel} + ${boardObj.model} 组合通过检测，适配 ${sceneLabel}。`;
+                let detailsHtml = `
+                            <span>⚡ CPU ${state.cpuTdp}W</span>
+                            <span>🎮 GPU ${gpuModel} (${state.gpuTdp}W)</span>
+                            <span>🔌 总功耗 ≈ ${totalTdp}W</span>
+                            <span>⚡ 电源 ${psuW}W (推荐 ≥${recommendedPsu}W)</span>
+                            <span>🧠 ${memoryType}</span>
+                            <span>🎯 ${sceneLabel}</span>
+                        `;
+                statusDetails.innerHTML = detailsHtml;
+                let extra = '';
+                if (riscvNote) extra += `<div style="margin-top:8px;color:#b8860b;">${riscvNote}</div>`;
+                if (armNote) extra += `<div style="margin-top:6px;color:var(--text2);">${armNote}</div>`;
+                extra +=
+                    `<div style="margin-top:8px;font-size:0.85rem;color:var(--text2);">✅ 适配优势：${arch.philosophy} 典型设备：${arch.devices}</div>`;
+                extra += gameFpsHtml;
+                extra += recHardwareHtml;
+                statusExtra.innerHTML = extra;
+            } else {
+                statusCard.className = 'status-card incompatible';
+                statusIcon.textContent = '❌';
+                statusTitle.textContent = '🔴 存在兼容冲突';
+                statusDesc.textContent = `${arch.icon} ${arch.label} · ${cpuModel} 与当前硬件组合不兼容。`;
+                let conflictHtml = '<ul class="conflict-list">';
+                conflicts.forEach(c => {
+                    conflictHtml += `<li>${c}</li>`;
+                });
+                conflictHtml += '</ul>';
+                statusDetails.innerHTML = conflictHtml;
+
+                let extra = '';
+                if (suggestion) {
+                    extra += `<div class="suggestion-box">
+                                <strong>💡 改造建议</strong>
+                                ${suggestion.items.map((s, i) => `<div>${i+1}. ${s}</div>`).join('')}
+                            </div>`;
+                }
+                if (riscvNote) extra += `<div style="margin-top:8px;color:#b8860b;">${riscvNote}</div>`;
+                if (armNote) extra += `<div style="margin-top:6px;color:var(--text2);">${armNote}</div>`;
+                extra += recHardwareHtml; // 即使不兼容也显示推荐
+                statusExtra.innerHTML = extra;
+            }
+        }
+
+        // ================================================================
+        //  15. 生成方案
+        // ================================================================
+        function generatePlan() {
+            if (state.compatible !== false) {
+                planOutput.classList.remove('show');
+                return;
+            }
+            const arch = ARCH_DATA[state.arch];
+            if (!arch) return;
+
+            const sceneMap = { pc: 'PC', server: '服务器', embedded: '嵌入式', iot: 'IoT' };
+            const sceneLabel = state.scene ? sceneMap[state.scene] || state.scene : '未选择';
+
+            const conflicts = state.conflictReasons || [];
+            let hasBoardIssue = conflicts.some(c => c.includes('主板'));
+            let hasMemIssue = conflicts.some(c => c.includes('内存'));
+            let hasPsuIssue = conflicts.some(c => c.includes('电源'));
+            let hasSceneIssue = conflicts.some(c => c.includes('场景'));
+
+            const cheapPlan = [];
+            const perfPlan = [];
+
+            if (hasBoardIssue) {
+                const cpu = arch.cpus.find(c => c.model === state.cpuModel);
+                const recBoards = arch.boards.filter(b => b.socket === cpu?.socket).slice(0, 2);
+                if (recBoards.length) {
+                    cheapPlan.push(`更换主板为：${recBoards[0].model}`);
+                    perfPlan.push(`更换主板为：${recBoards[recBoards.length-1]?.model || recBoards[0].model}`);
+                } else {
+                    cheapPlan.push('更换主板为兼容型号');
+                    perfPlan.push('更换主板为高性能兼容型号');
+                }
+            } else {
+                cheapPlan.push('保持当前主板');
+                perfPlan.push('保持当前主板');
+            }
+
+            if (hasMemIssue) {
+                const supported = arch.boards.find(b => b.model === state.board)?.memory || ['DDR4'];
+                cheapPlan.push(`更换内存为：${supported[0]}`);
+                perfPlan.push(`更换内存为：${supported[supported.length-1] || supported[0]}`);
+            } else {
+                cheapPlan.push('保持当前内存');
+                perfPlan.push('保持当前内存');
+            }
+
+            if (hasPsuIssue) {
+                const cpuTdp = arch.cpus.find(c => c.model === state.cpuModel)?.tdp || 100;
+                const gpuTdp = state.gpuTdp || 150;
+                const recW = Math.ceil((cpuTdp + gpuTdp + 50) * 1.25);
+                const recW_rounded = Math.ceil(recW / 50) * 50;
+                cheapPlan.push(`更换电源为：${recW_rounded}W（标准）`);
+                perfPlan.push(`更换电源为：${recW_rounded + 100}W（高性能余量）`);
+            } else {
+                cheapPlan.push('保持当前电源');
+                perfPlan.push('保持当前电源');
+            }
+
+            if (hasSceneIssue) {
+                const recScenes = arch.scenes.map(s => sceneMap[s]).join('、');
+                cheapPlan.push(`调整场景为：${recScenes.split('、')[0]}`);
+                perfPlan.push(`调整场景为：${recScenes}`);
+            } else {
+                cheapPlan.push(`保持场景：${sceneLabel}`);
+            }
+
+            if (state.arch === 'riscv') {
+                cheapPlan.push('推荐 SiFive 或赛昉专用板提升性能');
+                perfPlan.push('推荐 SiFive U74 或赛昉 JH7110 旗舰板');
+            }
+
+            planContent.innerHTML = `
+                        <div class="plan-card" style="border-color:#22b573;">
+                            <div class="plan-title" style="color:#22b573;">💰 性价比方案</div>
+                            <ul>${cheapPlan.map(s => `<li>${s}</li>`).join('')}</ul>
+                            <div style="font-size:0.75rem;color:var(--text2);margin-top:4px;">预估成本：★★☆☆☆</div>
+                        </div>
+                        <div class="plan-card" style="border-color:#2a6df4;">
+                            <div class="plan-title" style="color:#2a6df4;">⚡ 高性能方案</div>
+                            <ul>${perfPlan.map(s => `<li>${s}</li>`).join('')}</ul>
+                            <div style="font-size:0.75rem;color:var(--text2);margin-top:4px;">预估成本：★★★★☆</div>
+                        </div>
+                    `;
+            planOutput.classList.add('show');
+            state.planGenerated = true;
+        }
+
+        // ================================================================
+        //  16. 导出报告
+        // ================================================================
+        function exportReport() {
+            const arch = state.arch ? ARCH_DATA[state.arch] : null;
+            const cpuModel = state.cpuModel || '未选择';
+            const boardModel = state.board || '未选择';
+            const memory = state.memory || '未选择';
+            const gpu = state.gpu || '未选择';
+            const psu = state.psu || 0;
+            const storage = state.storage || '未选择';
+            const sceneMap = { pc: 'PC', server: '服务器', embedded: '嵌入式', iot: 'IoT' };
+            const sceneLabel = state.scene ? sceneMap[state.scene] || state.scene : '未选择';
+
+            let lines = [];
+            lines.push('═══════════════════════════════════════════════');
+            lines.push('  硬件兼容性检测报告 (Intel + NVIDIA 专属)');
+            lines.push('  生成时间：' + new Date().toLocaleString());
+            lines.push('═══════════════════════════════════════════════');
+            lines.push('');
+            lines.push('【硬件配置清单】');
+            lines.push(`  CPU 架构    ：${arch ? arch.icon + ' ' + arch.label : '未选择'}`);
+            lines.push(`  CPU 型号    ：${cpuModel} (TDP ${state.cpuTdp}W)`);
+            lines.push(`  主板        ：${boardModel}`);
+            lines.push(`  内存类型    ：${memory}`);
+            lines.push(`  显卡        ：${gpu} (TDP ${state.gpuTdp}W)`);
+            lines.push(`  电源        ：${psu}W`);
+            lines.push(`  硬盘        ：${storage}`);
+            lines.push(`  使用场景    ：${sceneLabel}`);
+            lines.push('');
+            lines.push('【兼容性结论】');
+            if (state.compatible === true) {
+                lines.push(`  ✅ 兼容 — 配置通过检测`);
+                const totalTdp = state.cpuTdp + state.gpuTdp + 50;
+                const recPsu = Math.ceil(totalTdp * 1.25);
+                lines.push(`  估算总功耗：${totalTdp}W，推荐电源 ≥${recPsu}W`);
+                lines.push(`  适配优势：${arch ? arch.philosophy : ''}`);
+                // 游戏帧率
+                const gpuShort = gpu.replace('NVIDIA ', '');
+                for (const [game, gpuMap] of Object.entries(GAME_FPS)) {
+                    for (const [key, val] of Object.entries(gpuMap)) {
+                        if (gpuShort.includes(key) || key.includes(gpuShort)) {
+                            lines.push(`  ${game} 帧率：~${val} FPS (1080p High)`);
+                            break;
+                        }
+                    }
+                }
+            } else if (state.compatible === false) {
+                lines.push(`  ❌ 不兼容 — 存在 ${state.conflictReasons.length} 项冲突`);
+                lines.push('  冲突详情：');
+                state.conflictReasons.forEach((c, i) => {
+                    lines.push(`    ${i+1}. ${c}`);
+                });
+                if (state.suggestion) {
+                    lines.push('');
+                    lines.push('【改造建议】');
+                    state.suggestion.items.forEach((s, i) => {
+                        lines.push(`  ${i+1}. ${s}`);
+                    });
+                }
+            } else {
+                lines.push('  ⚠️ 硬件选择不完整，请补充。');
+            }
+            lines.push('');
+            lines.push('【架构参数】');
+            Object.values(ARCH_DATA).forEach(a => {
+                lines.push(`  ${a.icon} ${a.label}：寄存器 ${a.registers} | ${a.isa} | 功耗 ${a.power} | ${a.devices}`);
+            });
+            lines.push('');
+            const totalCpus = ARCH_DATA.x86.cpus.length + ARCH_DATA.arm.cpus.length + ARCH_DATA.mips.cpus.length + ARCH_DATA
+                .riscv.cpus.length;
+            const totalBoards = ARCH_DATA.x86.boards.length + ARCH_DATA.arm.boards.length + ARCH_DATA.mips.boards.length +
+                ARCH_DATA.riscv.boards.length;
+            lines.push(`内置型号数：CPU ${totalCpus} 款，GPU ${GPU_LIST.length} 款，主板 ${totalBoards} 款`);
+            lines.push('═══════════════════════════════════════════════');
+
+            const text = lines.join('\n');
+            reportOutput.textContent = text;
+            reportOutput.classList.add('show');
+            reportOutput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // ================================================================
+        //  17. 架构详情弹窗
+        // ================================================================
+        function showArchDetail() {
+            const modal = document.getElementById('archModal');
+            const content = document.getElementById('modalContent');
+            let html = '';
+            Object.values(ARCH_DATA).forEach(a => {
+                html += `
+                            <div class="arch-detail-item">
+                                <span style="font-size:1.6rem;margin-right:10px;">${a.icon}</span>
+                                <div style="flex:1;">
+                                    <div style="font-weight:700;font-size:1.05rem;">${a.label}</div>
+                                    <div style="font-size:0.82rem;color:var(--text2);margin-top:2px;">
+                                        寄存器：${a.registers} 个 &nbsp;|&nbsp; 指令集：${a.isa} &nbsp;|&nbsp; 功耗：${a.power}
+                                    </div>
+                                    <div style="font-size:0.82rem;color:var(--text2);">典型设备：${a.devices}</div>
+                                    <div style="font-size:0.85rem;margin-top:6px;background:var(--bg);padding:6px 12px;border-radius:8px;">
+                                        ${a.philosophy}
+                                    </div>
+                                    <div style="font-size:0.75rem;color:var(--text2);margin-top:4px;">
+                                        内置 CPU 型号 ${a.cpus.length} 款，主板 ${a.boards.length} 款
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            });
+            content.innerHTML = html;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        document.querySelectorAll('.modal-overlay').forEach(el => {
+            el.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+
+        // ================================================================
+        //  18. 重置
+        // ================================================================
+        function resetAll() {
+            cpuBtns.forEach(btn => btn.classList.remove('active'));
+            sceneBtns.forEach(btn => btn.classList.remove('active'));
+            state.arch = null;
+            state.cpuModel = null;
+            state.cpuTdp = 0;
+            state.cpuSocket = '';
+            state.board = null;
+            state.boardObj = null;
+            state.memory = 'DDR4-3200';
+            state.gpu = 'NVIDIA RTX 3060';
+            state.gpuTdp = 170;
+            state.psu = 550;
+            state.storage = 'SSD 512GB';
+            state.scene = null;
+            state.compatible = null;
+            state.conflictReasons = [];
+            state.suggestion = null;
+            state.planGenerated = false;
+
+            cpuSearch.value = '';
+            cpuModelSel.disabled = true;
+            cpuModelSel.innerHTML = '<option value="">请先选择架构</option>';
+            motherboardSel.disabled = true;
+            motherboardSel.innerHTML = '<option value="">请先选择CPU型号</option>';
+            memorySel.value = 'DDR4-3200';
+            gpuSel.value = 'NVIDIA RTX 3060';
+            psuSel.value = '550';
+            storageSel.value = 'SSD 512GB';
+
+            statusCard.className = 'status-card';
+            statusIcon.textContent = '🔍';
+            statusTitle.textContent = '等待选择硬件';
+            statusDesc.textContent = '请选择 CPU 架构、具体型号、主板等组件。';
+            statusDetails.innerHTML = '';
+            statusExtra.innerHTML = '';
+            philosophyDisplay.textContent = '选择 CPU 架构后显示对应的设计哲学';
+            planOutput.classList.remove('show');
+            reportOutput.classList.remove('show');
+            reportOutput.textContent = '';
+            planBtn.disabled = true;
+            renderParamTable();
+            selectArch('x86');
+            selectScene('pc');
+        }
+
+        // ================================================================
+        //  19. 启动
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
